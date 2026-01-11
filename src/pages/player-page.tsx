@@ -450,26 +450,34 @@ function PlayerPage() {
             ],
           },
         ],
-        customType: {
-          m3u8: function playM3u8(video, url, art) {
-            if (Hls.isSupported()) {
-              if (art.hls) art.hls.destroy();
-              const hls = new Hls();
-              const proxyUrl = localStorage.getItem("m3u8ProxySelected");
-              const finalUrl = proxyUrl ? `${proxyUrl}${url}` : url;
-              hls.loadSource(finalUrl);
-              hls.attachMedia(video);
-              art.hls = hls;
-              art.on("destroy", () => hls.destroy());
-            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-              const proxyUrl = localStorage.getItem("m3u8ProxySelected");
-              const finalUrl = proxyUrl ? `${proxyUrl}${url}` : url;
-              video.src = finalUrl;
-            } else {
-              art.notice.show = "不支持的播放格式: m3u8";
-            }
-          },
-        },
+customType: {
+  m3u8: function playM3u8(video: HTMLVideoElement, url: string, art: ArtPlayerInstance) {
+    if (Hls.isSupported()) {
+      // 先判断 art.hls 存在再调用 destroy
+      if (art.hls) {
+        art.hls.destroy();
+      }
+      const hls: HlsInstance = new Hls();
+      const proxyUrl = localStorage.getItem("m3u8ProxySelected");
+      const finalUrl = proxyUrl ? `${proxyUrl}${url}` : url;
+      hls.loadSource(finalUrl);
+      hls.attachMedia(video);
+      art.hls = hls;
+      // 监听 art 销毁事件，清理 hls 实例
+      art.on("destroy", () => {
+        if (hls.destroy) {
+          hls.destroy();
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      const proxyUrl = localStorage.getItem("m3u8ProxySelected");
+      const finalUrl = proxyUrl ? `${proxyUrl}${url}` : url;
+      video.src = finalUrl;
+    } else {
+      art.notice.show = "不支持的播放格式: m3u8";
+    }
+  },
+},
       });
 
       // 监听视频播放完毕事件
